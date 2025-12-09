@@ -4,10 +4,17 @@ import { Pool } from '@neondatabase/serverless'
 import chalk from 'chalk'
 import dotenv from 'dotenv'
 
+// Ensure environment variables are loaded
 dotenv.config()
 
+// Verify DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  console.error(chalk.red('✗ DATABASE_URL environment variable is not set'))
+  throw new Error('DATABASE_URL is required')
+}
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-const adapter = new PrismaNeon(pool)
+const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL })
 
 const prisma = new PrismaClient({
   adapter,

@@ -30,11 +30,7 @@ export const registerUser = async ({ name, email, password }) => {
     },
   })
 
-  res.status(201).json({
-    status: 'success',
-    message: 'User registered successfully',
-    data: { id: user.id, name: user.name, email: user.email },
-  })
+  return user
 }
 
 export const loginUser = async ({ email, password }) => {
