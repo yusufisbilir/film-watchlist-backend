@@ -5,11 +5,11 @@ import authRouter from './routes/auth.route.js'
 import { config } from 'dotenv'
 import { connectDB, disconnectDB } from './config/db.js'
 
+// Load environment variables from .env file FIRST
+config()
+
 // Connect to the database
 connectDB()
-
-// Load environment variables from .env file
-config()
 
 const app = express()
 
