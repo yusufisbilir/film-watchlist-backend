@@ -13,6 +13,10 @@ config()
 
 const app = express()
 
+// body parser middleware
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
 // API Routes
 app.use('/movies', moviesRouter)
 app.use('/auth', authRouter)
