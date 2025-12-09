@@ -1,6 +1,7 @@
 import express from 'express'
 import chalk from 'chalk'
 import moviesRouter from './routes/movies.route.js'
+import authRouter from './routes/auth.route.js'
 import { config } from 'dotenv'
 import { connectDB, disconnectDB } from './config/db.js'
 
@@ -14,6 +15,7 @@ const app = express()
 
 // API Routes
 app.use('/movies', moviesRouter)
+app.use('/auth', authRouter)
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
