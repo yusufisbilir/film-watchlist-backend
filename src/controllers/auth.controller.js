@@ -1,4 +1,5 @@
 import * as authService from '../services/auth.service.js'
+import { generateJWTToken } from '../utils/generateJWTToken.util.js'
 
 export const register = async (req, res) => {
   try {
@@ -67,10 +68,14 @@ export const login = async (req, res) => {
 
     const user = await authService.loginUser({ email, password })
 
+    // Generate JWT token
+    const token = generateJWTToken(user.id)
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
       data: { user },
+      token,
     })
   } catch (error) {
     console.error('Login error:', error)

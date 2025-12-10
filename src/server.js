@@ -29,7 +29,7 @@ app.get('/health', (req, res) => {
 // Start the server
 const PORT = process.env.PORT || 5001
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(chalk.greenBright(`Server is running on port ${PORT}`))
 })
 
