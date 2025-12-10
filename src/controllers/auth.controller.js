@@ -69,7 +69,7 @@ export const login = async (req, res) => {
     const user = await authService.loginUser({ email, password })
 
     // Generate JWT token
-    const token = generateJWTToken(user.id)
+    const token = generateJWTToken(user.id, res)
 
     res.status(200).json({
       success: true,
