@@ -1,9 +1,12 @@
 import express from 'express'
 import chalk from 'chalk'
-import moviesRouter from './routes/movies.route.js'
-import authRouter from './routes/auth.route.js'
 import { config } from 'dotenv'
 import { connectDB, disconnectDB } from './config/db.js'
+
+// Import routers
+import authRouter from './routes/auth.route.js'
+import moviesRouter from './routes/movies.route.js'
+import watchlistRouter from './routes/watchlist.route.js'
 
 // Load environment variables from .env file FIRST
 config()
@@ -20,6 +23,7 @@ app.use(express.urlencoded({ extended: true }))
 // API Routes
 app.use('/movies', moviesRouter)
 app.use('/auth', authRouter)
+app.use('/watchlist', watchlistRouter)
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
