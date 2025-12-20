@@ -76,3 +76,116 @@ export const removeFromWatchlist = async (req, res) => {
     })
   }
 }
+
+export const updateWatchlistItem = async (req, res) => {
+  try {
+    const { status, rating, notes } = req.body
+    const userId = req.user.id
+    const watchlistItemId = req.params.id
+
+    const watchlistItem = await prisma.watchlistItem.findUnique({
+      where: { id: watchlistItemId },
+    })
+
+    if (!watchlistItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Watchlist item not found',
+      })
+    }
+
+    if (watchlistItem.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not allowed to update this watchlist item',
+      })
+    }
+
+    const updatedWatchlistItem = await prisma.watchlistItem.update({
+      where: { id: watchlistItemId },
+      data: {
+        ...(status && { status }),
+        ...(rating !== undefined && { rating }),
+        ...(notes !== undefined && { notes }),
+      },
+    })
+
+    res.status(200).json({
+      success: true,
+      message: 'Watchlist item updated',
+      data: { watchlistItem: updatedWatchlistItem },
+    })
+  } catch (error) {
+    console.error('Update watchlist item error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update watchlist item',
+    })
+  }
+}
+
+export const getWatchlistItems = async (req, res) => {
+  try {
+    const userId = req.user.id
+
+    const watchlistItems = await prisma.watchlistItem.findMany({
+      where: { userId },
+      include: {
+        movie: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    res.status(200).json({
+      success: true,
+      data: { watchlistItems },
+    })
+  } catch (error) {
+    console.error('Get watchlist items error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get watchlist items',
+    })
+  }
+}
+
+export const getWatchlistItem = async (req, res) => {
+  try {
+    const userId = req.user.id
+    const watchlistItemId = req.params.id
+
+    const watchlistItem = await prisma.watchlistItem.findUnique({
+      where: { id: watchlistItemId },
+      include: {
+        movie: true,
+      },
+    })
+
+    if (!watchlistItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Watchlist item not found',
+      })
+    }
+
+    if (watchlistItem.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not allowed to access this watchlist item',
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { watchlistItem },
+    })
+  } catch (error) {
+    console.error('Get watchlist item error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get watchlist item',
+    })
+  }
+}
