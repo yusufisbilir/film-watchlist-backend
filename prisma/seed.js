@@ -1,8 +1,10 @@
+import bcrypt from 'bcrypt'
 import { prisma, connectDB, disconnectDB } from '../src/config/db.js'
 
 const creatorId = 'aac3b593-14c6-4315-b05e-9dc0117a74441'
 const creatorEmail = 'demo@watchlist.local'
 const creatorName = 'Demo User'
+const creatorPassword = 'demo123' // Demo password for testing
 
 const movies = [
   {
@@ -30,15 +32,20 @@ const movies = [
 const seed = async () => {
   await connectDB()
 
+  // Hash password using the same method as register (bcrypt with salt rounds 10)
+  const hashedPassword = await bcrypt.hash(creatorPassword, 10)
+
   // Ensure the creator exists before inserting movies to satisfy the FK
   const creator = await prisma.user.upsert({
     where: { email: creatorEmail },
-    update: {},
+    update: {
+      password: hashedPassword, // Update password if user exists
+    },
     create: {
       id: creatorId,
       name: creatorName,
       email: creatorEmail,
-      password: 'placeholder-password', // replace after adding proper hashing/fixtures
+      password: hashedPassword,
     },
   })
 
