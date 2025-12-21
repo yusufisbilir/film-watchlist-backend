@@ -1,29 +1,18 @@
-import { prisma } from '../config/db.js'
+import * as movieService from '../services/movie.service.js'
 
 export const createMovie = async (req, res) => {
   try {
     const { title, overview, releaseYear, genres, runtime, posterUrl } = req.body
     const userId = req.user.id
 
-    const movie = await prisma.movie.create({
-      data: {
-        title,
-        overview,
-        releaseYear,
-        genres: genres || [],
-        runtime,
-        posterUrl,
-        createdBy: userId,
-      },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+    const movie = await movieService.createMovie({
+      title,
+      overview,
+      releaseYear,
+      genres,
+      runtime,
+      posterUrl,
+      userId,
     })
 
     res.status(201).json({
@@ -42,55 +31,11 @@ export const createMovie = async (req, res) => {
 
 export const getMovies = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, year, genre } = req.query
-    const skip = (parseInt(page) - 1) * parseInt(limit)
-
-    const where = {}
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { overview: { contains: search, mode: 'insensitive' } },
-      ]
-    }
-    if (year) {
-      where.releaseYear = parseInt(year)
-    }
-    if (genre) {
-      where.genres = { has: genre }
-    }
-
-    const [movies, total] = await Promise.all([
-      prisma.movie.findMany({
-        where,
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip,
-        take: parseInt(limit),
-      }),
-      prisma.movie.count({ where }),
-    ])
+    const result = await movieService.getMovies(req.query)
 
     res.status(200).json({
       success: true,
-      data: {
-        movies,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          totalPages: Math.ceil(total / parseInt(limit)),
-        },
-      },
+      data: result,
     })
   } catch (error) {
     console.error('Get movies error:', error)
@@ -103,27 +48,7 @@ export const getMovies = async (req, res) => {
 
 export const getMovie = async (req, res) => {
   try {
-    const movieId = req.params.id
-
-    const movie = await prisma.movie.findUnique({
-      where: { id: movieId },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
-
-    if (!movie) {
-      return res.status(404).json({
-        success: false,
-        message: 'Movie not found',
-      })
-    }
+    const movie = await movieService.getMovieById(req.params.id)
 
     res.status(200).json({
       success: true,
@@ -131,6 +56,12 @@ export const getMovie = async (req, res) => {
     })
   } catch (error) {
     console.error('Get movie error:', error)
+    if (error.message === 'Movie not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found',
+      })
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to get movie',
@@ -144,43 +75,18 @@ export const updateMovie = async (req, res) => {
     const userId = req.user.id
     const movieId = req.params.id
 
-    const movie = await prisma.movie.findUnique({
-      where: { id: movieId },
-    })
+    const updateData = {}
+    if (title !== undefined) updateData.title = title
+    if (overview !== undefined) updateData.overview = overview
+    if (releaseYear !== undefined) updateData.releaseYear = releaseYear
+    if (genres !== undefined) updateData.genres = genres
+    if (runtime !== undefined) updateData.runtime = runtime
+    if (posterUrl !== undefined) updateData.posterUrl = posterUrl
 
-    if (!movie) {
-      return res.status(404).json({
-        success: false,
-        message: 'Movie not found',
-      })
-    }
-
-    if (movie.createdBy !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not allowed to update this movie',
-      })
-    }
-
-    const updatedMovie = await prisma.movie.update({
-      where: { id: movieId },
-      data: {
-        ...(title !== undefined && { title }),
-        ...(overview !== undefined && { overview }),
-        ...(releaseYear !== undefined && { releaseYear }),
-        ...(genres !== undefined && { genres }),
-        ...(runtime !== undefined && { runtime }),
-        ...(posterUrl !== undefined && { posterUrl }),
-      },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+    const updatedMovie = await movieService.updateMovie({
+      movieId,
+      userId,
+      updateData,
     })
 
     res.status(200).json({
@@ -190,6 +96,18 @@ export const updateMovie = async (req, res) => {
     })
   } catch (error) {
     console.error('Update movie error:', error)
+    if (error.message === 'Movie not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found',
+      })
+    }
+    if (error.message === 'Not allowed to update this movie') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not allowed to update this movie',
+      })
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to update movie',
@@ -202,27 +120,7 @@ export const deleteMovie = async (req, res) => {
     const userId = req.user.id
     const movieId = req.params.id
 
-    const movie = await prisma.movie.findUnique({
-      where: { id: movieId },
-    })
-
-    if (!movie) {
-      return res.status(404).json({
-        success: false,
-        message: 'Movie not found',
-      })
-    }
-
-    if (movie.createdBy !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not allowed to delete this movie',
-      })
-    }
-
-    await prisma.movie.delete({
-      where: { id: movieId },
-    })
+    await movieService.deleteMovie({ movieId, userId })
 
     res.status(200).json({
       success: true,
@@ -230,6 +128,18 @@ export const deleteMovie = async (req, res) => {
     })
   } catch (error) {
     console.error('Delete movie error:', error)
+    if (error.message === 'Movie not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found',
+      })
+    }
+    if (error.message === 'Not allowed to delete this movie') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not allowed to delete this movie',
+      })
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to delete movie',
